@@ -1,0 +1,37 @@
+stages:
+  - build
+  - deploy
+
+build prod tps-election:
+   image: node:10.15.0-stretch
+   tags: 
+      - azure
+   stage: build
+   only: 
+      - main
+   script:
+      # Install all dependencies  
+      #- npm install react-email-editor@1.6.1
+      - npm install --legacy-peer-deps
+      # Build App    
+      - CI=false npm run build
+   artifacts:    
+      paths:      
+         # Build folder      
+         - build/
+      expire_in: 1 hour
+
+deploy prod-azure:
+  image: python:latest
+  tags: 
+     - azure
+  stage: deploy
+  only:
+    - main
+  script:
+    - pip3 install azure-cli
+    - az login -u $AZ_USER_NAME -p $AZ_USER_PASSWORD
+    - az account set --subscription $AZ_SUBSCRIPTION_ID
+    - az storage blob delete-batch -s "\$web" --connection-string $AZURE_STORAGE_CONNECTION_STRING
+    - az storage blob upload-batch -d "\$web" -s build --connection-string $AZURE_STORAGE_CONNECTION_STRING
+    #- az cdn endpoint purge -g BZID --name bzpublishadminnew --profile-name bzid-cdn --content-paths "/*"
